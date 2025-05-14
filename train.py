@@ -33,7 +33,7 @@ args = parse_args()
 
 def main():
 
-    env = gym.make("CartPole-v1")
+    env = gym.make("CartPole-v1")  # 1t_change
     # env = gym.make('CustomHopper-target-v0')
 
     print("Action space:", env.action_space)
@@ -59,23 +59,23 @@ def main():
     for episode in range(args.n_episodes):
         done = False
         train_reward = 0
-        state, _ = env.reset()
+        state = env.reset()  # -----change from state, _  , 4th
         # Reset the environment and observe the initial state
 
     while not done:
         # changes to
         action, action_probabilities = agent.get_action(state)
 
-        next_state, reward, terminated, truncated, info = env.step(
-            action
-        )  # <-- Corrected here
-        done = terminated or truncated
+        # because its for gym 0.26 +   ,comment in  4th
+        # next_state, reward, terminated, truncated, info = env.step(action)  # <-- Corrected here
+        # done = terminated or truncated
+        next_state, reward, done, info = env.step(action)
 
         agent.store_outcome(state, next_state, action_probabilities, reward, done)
 
         train_reward += reward
 
-        # previous code :
+        # primary code :
         # action, action_probabilities = agent.get_action(state)
         # previous_state = state
 
