@@ -3,6 +3,8 @@ import torch
 import torch.nn.functional as F
 from torch.distributions import Normal
 
+# changes by Erfan
+
 
 def discount_rewards(r, gamma):
     discounted_r = torch.zeros_like(r)
@@ -37,6 +39,10 @@ class Policy(torch.nn.Module):
             Critic network
         """
         # TASK 3: critic network for actor-critic algorithm
+        # changes
+        self.fc1_critic = torch.nn.Linear(self.state_space, self.hidden)
+        self.fc2_critic = torch.nn.Linear(self.hidden, self.hidden)
+        self.fc3_critic_value = torch.nn.Linear(self.hidden, 1)
 
         self.init_weights()
 
@@ -61,12 +67,16 @@ class Policy(torch.nn.Module):
             Critic
         """
         # TASK 3: forward in the critic network
+        # changes
+        x_critic = self.tanh(self.fc1_critic(x))
+        x_critic = self.tanh(self.fc2_critic(x_critic))
+        value = self.fc3_critic_value(x_critic)
 
-        return normal_dist
+        return normal_dist, value.squeeze(-1)
 
 
 class Agent(object):
-    def __init__(self, policy, device="cpu"):
+    def __init__(self, policy, device="cpu", use_critic=True):
         self.train_device = device
         self.policy = policy.to(self.train_device)
         self.optimizer = torch.optim.Adam(policy.parameters(), lr=1e-3)
@@ -78,28 +88,20 @@ class Agent(object):
         self.rewards = []
         self.done = []
 
-    # mahsa :
+        # changes
+        self.use_critic = use_critic  # <-- ADD THIS
+
     def update_policy(self):
         action_log_probs = (
-            torch.stack(self.action_log_probs).to(self.train_device).squeeze(-1)
+            torch.stack(self.action_log_probs, dim=0).to(self.train_device).squeeze(-1)
         )
-        rewards = torch.stack(self.rewards).to(self.train_device).squeeze(-1)
+        states = torch.stack(self.states, dim=0).to(self.train_device).squeeze(-1)
+        next_states = (
+            torch.stack(self.next_states, dim=0).to(self.train_device).squeeze(-1)
+        )
+        rewards = torch.stack(self.rewards, dim=0).to(self.train_device).squeeze(-1)
+        done = torch.Tensor(self.done).to(self.train_device)
 
-        # === TASK 2: compute discounted returns ===
-        returns = discount_rewards(rewards, gamma=self.gamma)
-        returns = (returns - returns.mean()) / (
-            returns.std() + 1e-8
-        )  # normalize for stability
-
-        # === compute REINFORCE loss ===
-        loss = -(action_log_probs * returns).sum()
-
-        # === backprop ===
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
-
-        # === reset memory ===
         (
             self.states,
             self.next_states,
@@ -108,22 +110,51 @@ class Agent(object):
             self.done,
         ) = ([], [], [], [], [])
 
+        # changes
+        returns = discount_rewards(rewards, gamma=self.gamma)
+
+        if self.use_critic:
+            _, values = self.policy(states)
+            advantages = returns - values.detach()
+            advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
+
+            actor_loss = -(action_log_probs * advantages).sum()
+            critic_loss = F.mse_loss(values, returns)
+
+            loss = actor_loss + critic_loss
+        else:
+            returns = (returns - returns.mean()) / (returns.std() + 1e-8)
+            loss = -(action_log_probs * returns).sum()
+
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
+
+        return
+
+        #
+        # TASK 3:
+        #   - compute boostrapped discounted return estimates
+        #   - compute advantage terms
+        #   - compute actor loss and critic loss
+        #   - compute gradients and step the optimizer
+
     def get_action(self, state, evaluation=False):
-        """state -> action (3-d), action_log_densities"""
         x = torch.from_numpy(state).float().to(self.train_device)
 
-        normal_dist = self.policy(x)
+        normal_dist, _ = self.policy(x)
 
         if evaluation:  # Return mean
-            return normal_dist.mean, None
-
+            # changes
+            action = torch.argmax(normal_dist.mean).item()
+            return action, None
         else:  # Sample from the distribution
-            action = normal_dist.sample()
+            action = torch.argmax(normal_dist.sample()).item()
 
             # Compute Log probability of the action [ log(p(a[0] AND a[1] AND a[2])) = log(p(a[0])*p(a[1])*p(a[2])) = log(p(a[0])) + log(p(a[1])) + log(p(a[2])) ]
-            action_log_prob = normal_dist.log_prob(action).sum()
+            action_log_prob = torch.log_softmax(normal_dist.sample(), dim=0)[action]
 
-        return action, action_log_prob
+            return action, action_log_prob
 
     def store_outcome(self, state, next_state, action_log_prob, reward, done):
         self.states.append(torch.from_numpy(state).float())
