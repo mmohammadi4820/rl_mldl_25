@@ -64,6 +64,8 @@ def main():
 			print('Training episode:', episode)
 			print('Episode return:', train_reward)
 
+# task 2 : 
+		agent.update_policy()
 
 	torch.save(agent.policy.state_dict(), "model.mdl")
 
