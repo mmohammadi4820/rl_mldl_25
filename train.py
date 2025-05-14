@@ -15,10 +15,10 @@ def parse_args():
     # change the default number 100000 t0 500 and 20000 to 10
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--n-episodes", default=100000, type=int, help="Number of training episodes"
+        "--n-episodes", default=500, type=int, help="Number of training episodes"
     )
     parser.add_argument(
-        "--print-every", default=20000, type=int, help="Print info every <> episodes"
+        "--print-every", default=10, type=int, help="Print info every <> episodes"
     )
     parser.add_argument(
         "--device", default="cpu", type=str, help="network device [cpu, cuda]"
