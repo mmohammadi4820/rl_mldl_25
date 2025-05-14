@@ -10,9 +10,10 @@ import gym
 from env.custom_hopper import *
 from agent import Agent, Policy
 
+# changed by Erfan
+
 
 def parse_args():
-    # change the default number 100000 t0 500 and 20000 to 10
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--n-episodes", default=500, type=int, help="Number of training episodes"
@@ -31,21 +32,23 @@ args = parse_args()
 
 
 def main():
-    # add new env here
+
     env = gym.make("CartPole-v1")
     # env = gym.make('CustomHopper-target-v0')
 
     print("Action space:", env.action_space)
     print("State space:", env.observation_space)
-    # print("Dynamics parameters:", env.get_parameters())
+
+    # print('Dynamics parameters:', env.get_parameters())
 
     """
 		Training
 	"""
     observation_space_dim = env.observation_space.shape[-1]
+
     # action_space_dim = env.action_space.shape[-1]
-    # add new action space
     action_space_dim = env.action_space.n
+
     policy = Policy(observation_space_dim, action_space_dim)
     agent = Agent(policy, device=args.device)
 
@@ -56,30 +59,33 @@ def main():
     for episode in range(args.n_episodes):
         done = False
         train_reward = 0
-        state = env.reset()  # Reset the environment and observe the initial state
+        state, _ = env.reset()
+        # Reset the environment and observe the initial state
 
-        while not done:  # Loop until the episode is over
+    while not done:
+        # changes to
+        action, action_probabilities = agent.get_action(state)
 
-            action, action_probabilities = agent.get_action(state)
-            next_state, reward, terminated, truncated, info = env.step(
-                action
-            )  # <-- Corrected here
-            done = terminated or truncated
+        next_state, reward, terminated, truncated, info = env.step(
+            action
+        )  # <-- Corrected here
+        done = terminated or truncated
 
-            agent.store_outcome(state, next_state, action_probabilities, reward, done)
+        agent.store_outcome(state, next_state, action_probabilities, reward, done)
 
-            train_reward += reward
-            # previous code :
-            # action, action_probabilities = agent.get_action(state)
+        train_reward += reward
+
+        # previous code :
+        # action, action_probabilities = agent.get_action(state)
         # previous_state = state
 
         # state, reward, done, info = env.step(action.detach().cpu().numpy())
 
         # agent.store_outcome(previous_state, state, action_probabilities, reward, done)
 
-        if (episode + 1) % args.print_every == 0:
-            print("Training episode:", episode)
-            print("Episode return:", train_reward)
+    if (episode + 1) % args.print_every == 0:
+        print("Training episode:", episode)
+        print("Episode return:", train_reward)
 
     torch.save(agent.policy.state_dict(), "model.mdl")
 
