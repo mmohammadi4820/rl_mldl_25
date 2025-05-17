@@ -56,7 +56,7 @@ def main():
     # agent = Agent(policy, device=args.device)
     ########################################## For draw charts to different bt ACT & REIN  ########################################
     agent = Agent(
-        policy, device=args.device, use_critic=True
+        policy, device=args.device, use_critic=False
     )  # [ use_critic--> False ]  means agent= REINFORCE
 
     ########################################## For draw charts to different bt ACT & REIN  ########################################
@@ -108,7 +108,7 @@ def main():
     torch.save(agent.policy.state_dict(), "model.mdl")
 
     ########################################## For draw charts to different bt ACT & REIN  ########################################
-    with open("rewards_actor_critic.pkl", "wb") as f:
+    with open("rewards_reinforce.pkl", "wb") as f:  # rewards_actor_critic.pkl
         pickle.dump(episode_rewards, f)
 
 
