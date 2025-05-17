@@ -87,9 +87,10 @@ class Agent(object):
         self.action_log_probs = []
         self.rewards = []
         self.done = []
+        self.state_values = []  # added  in task 3
 
         # changes
-        self.use_critic = use_critic  # <-- ADD THIS
+        self.use_critic = use_critic  # <-- ADD THIS task 2
 
     def update_policy(self):
         action_log_probs = (
@@ -101,14 +102,26 @@ class Agent(object):
         )
         rewards = torch.stack(self.rewards, dim=0).to(self.train_device).squeeze(-1)
         done = torch.Tensor(self.done).to(self.train_device)
-
+        # added in task 3
         (
             self.states,
             self.next_states,
             self.action_log_probs,
             self.rewards,
             self.done,
-        ) = ([], [], [], [], [])
+            self.state_values,
+        ) = ([], [], [], [], [], [])
+        """ To calculate the advantage accurately,
+          we need to keep the V(s) corresponding to each state."""
+        """(
+            self.states,
+            self.next_states,
+            self.action_log_probs,
+            self.rewards,
+            self.done,
+        ) = ([], [], [], [], []) """
+
+        values = torch.stack(self.state_values).to(self.train_device).squeeze(-1)
 
         # changes
         returns = discount_rewards(rewards, gamma=self.gamma)
@@ -142,23 +155,33 @@ class Agent(object):
     def get_action(self, state, evaluation=False):
         x = torch.from_numpy(state).float().to(self.train_device)
 
-        normal_dist, _ = self.policy(x)
+        # normal_dist, _ = self.policy(x) # task 3
+        normal_dist, value = self.policy(x)
+        """  Task 3 :
+        Reason: In Actor-Critic, we need to store the value 
+        (i.e. the estimate of V(s)) to be used in calculating
+          advantage and critic loss. """
 
         if evaluation:  # Return mean
             # changes
             action = torch.argmax(normal_dist.mean).item()
-            return action, None
+            # return action, None  # task3
+            return action, None, value
+
         else:  # Sample from the distribution
             action = torch.argmax(normal_dist.sample()).item()
 
             # Compute Log probability of the action [ log(p(a[0] AND a[1] AND a[2])) = log(p(a[0])*p(a[1])*p(a[2])) = log(p(a[0])) + log(p(a[1])) + log(p(a[2])) ]
             action_log_prob = torch.log_softmax(normal_dist.sample(), dim=0)[action]
 
-            return action, action_log_prob
+            # return action, action_log_prob  # task 3
+            return action, action_log_prob, value
 
-    def store_outcome(self, state, next_state, action_log_prob, reward, done):
+    # def store_outcome(self, state, next_state, action_log_prob, reward, done):  # task 3
+    def store_outcome(self, state, next_state, action_log_prob, reward, done, value):
         self.states.append(torch.from_numpy(state).float())
         self.next_states.append(torch.from_numpy(next_state).float())
         self.action_log_probs.append(action_log_prob)
         self.rewards.append(torch.Tensor([reward]))
         self.done.append(done)
+        self.state_values.append(value)  # added in task 3

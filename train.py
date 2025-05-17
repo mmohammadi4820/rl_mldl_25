@@ -64,14 +64,21 @@ def main():
 
     while not done:
         # changes to
-        action, action_probabilities = agent.get_action(state)
+        # action, action_probabilities = agent.get_action(state) comment in task 3
+        action, action_probabilities, value = agent.get_action(state)
 
         # because its for gym 0.26 +   ,comment in  4th
         # next_state, reward, terminated, truncated, info = env.step(action)  # <-- Corrected here
         # done = terminated or truncated
         next_state, reward, done, info = env.step(action)
-
-        agent.store_outcome(state, next_state, action_probabilities, reward, done)
+        # comment in task 3
+        # agent.store_outcome(state, next_state, action_probabilities, reward, done)
+        agent.store_outcome(
+            state, next_state, action_probabilities, reward, done, value
+        )
+        """ Reason: We need to get the value from get_action
+          and give it to store_outcome to use later in update_policy.
+        """
 
         train_reward += reward
 
