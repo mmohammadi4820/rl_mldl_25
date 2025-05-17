@@ -6,7 +6,7 @@ import argparse
 
 import torch
 import gym
-
+import pickle
 from env.custom_hopper import *
 from agent import Agent, Policy
 
@@ -32,6 +32,9 @@ args = parse_args()
 
 
 def main():
+    ########################################## For draw charts to different bt ACT & REIN  ########################################
+    episode_rewards = []
+    ########################################## For draw charts to different bt ACT & REIN  ############
 
     env = gym.make("CartPole-v1")  # 1t_change
     # env = gym.make('CustomHopper-target-v0')
@@ -50,8 +53,13 @@ def main():
     action_space_dim = env.action_space.n
 
     policy = Policy(observation_space_dim, action_space_dim)
-    agent = Agent(policy, device=args.device)
+    # agent = Agent(policy, device=args.device)
+    ########################################## For draw charts to different bt ACT & REIN  ########################################
+    agent = Agent(
+        policy, device=args.device, use_critic=False
+    )  # [ use_critic--> False ]  means agent= REINFORCE
 
+    ########################################## For draw charts to different bt ACT & REIN  ########################################
     #
     # TASK 2 and 3: interleave data collection to policy updates
     #
@@ -90,12 +98,21 @@ def main():
 
         # agent.store_outcome(previous_state, state, action_probabilities, reward, done)
 
+    ########################################## For draw charts to different bt ACT & REIN  ########################################
+    episode_rewards.append(train_reward)
+    ########################################## For draw charts to different bt ACT & REIN  ########################################
     if (episode + 1) % args.print_every == 0:
         print("Training episode:", episode)
         print("Episode return:", train_reward)
 
     torch.save(agent.policy.state_dict(), "model.mdl")
 
+    ########################################## For draw charts to different bt ACT & REIN  ########################################
+    with open("rewards_actor_critic.pkl", "wb") as f:
+        pickle.dump(episode_rewards, f)
+
+
+########################################## For draw charts to different bt ACT & REIN  ########################################
 
 if __name__ == "__main__":
     main()
