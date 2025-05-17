@@ -56,7 +56,7 @@ def main():
     # agent = Agent(policy, device=args.device)
     ########################################## For draw charts to different bt ACT & REIN  ########################################
     agent = Agent(
-        policy, device=args.device, use_critic=False
+        policy, device=args.device, use_critic=True
     )  # [ use_critic--> False ]  means agent= REINFORCE
 
     ########################################## For draw charts to different bt ACT & REIN  ########################################
